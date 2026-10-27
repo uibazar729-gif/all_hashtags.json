@@ -1,0 +1,46 @@
+import requests
+from bs4 import BeautifulSoup
+import json
+import time
+
+all_data = []
+seen_tags = set()
+
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+}
+
+print("=== IQHashtags Scraping Started (Pages 1 to 568) ===")
+
+# 1. Scraping IQHashtags (1 to 568 Pages)
+for page in range(1, 569):
+    url = f"https://iqhashtags.com/hashtags/page/{page}"
+    try:
+        res = requests.get(url, headers=headers, timeout=10)
+        if res.status_code == 200:
+            soup = BeautifulSoup(res.text, 'html.parser')
+            # टैग्स और वॉल्यूम बॉक्स निकालना
+            tag_elements = soup.find_all(['div', 'tr', 'a'], class_=lambda x: x and 'hashtag' in x.lower())
+            
+            # यदि सीधे टेक्स्ट फॉर्मेट में हो
+            words = soup.get_text().split()
+            for w in words:
+                if w.startswith('#') and len(w) > 2:
+                    tag_clean = w.strip().lower()
+                    if tag_clean not in seen_tags:
+                        seen_tags.add(tag_clean)
+                        # डिफॉल्ट वॉल्यूम
+                        all_data.append([tag_clean, "1M+", tag_clean.replace('#', '')])
+            
+            print(f"Page {page}/568 Scraped | Total tags collected: {len(all_data)}")
+        else:
+            print(f"Page {page} skipped (Status: {res.status_code})")
+    except Exception as e:
+        print(f"Error on page {page}: {e}")
+    time.sleep(0.5)
+
+# 2. Save into JSON File
+with open("all_hashtags.json", "w", encoding="utf-8") as f:
+    json.dump(all_data, f, ensure_ascii=False)
+
+print(f"\n✅ सफलता! कुल {len(all_data)} हैशटैग्स 'all_hashtags.json' में सेव हो गए!")
